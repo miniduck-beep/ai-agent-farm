@@ -1,0 +1,12 @@
+# Минимальный набор для FastAPI
+fastapi==0.100.0
+uvicorn==0.20.0
+celery==5.4.0  
+redis==5.0.4
+python-dotenv==1.0.1
+# Для основного функционала
+google-generativeai==0.5.4
+streamlit==1.35.0
+# Для базовых задач
+requests
+pydantic

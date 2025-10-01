@@ -1,0 +1,11 @@
+# Основные пакеты CrewAI (без инструментов)
+crewai==0.30.11
+streamlit==1.35.0
+celery==5.4.0
+redis==5.0.4
+python-dotenv==1.0.1
+google-generativeai==0.5.4
+langchain-google-genai
+# FastAPI и uvicorn 
+fastapi==0.100.0
+uvicorn[standard]==0.20.0
