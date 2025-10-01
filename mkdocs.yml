@@ -1,0 +1,100 @@
+site_name: AI Agent Farm Documentation
+site_description: Мощная многоагентная система для автоматизированных исследований
+site_author: AI Agent Farm Team
+site_url: https://ai-agent-farm.github.io/
+
+repo_name: ai-agent-farm/ai-agent-farm
+repo_url: https://github.com/miniduck-beep/ai-agent-farm
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search:
+      lang: en
+  - mermaid2
+
+nav:
+  - 'Главная': 'index.md'
+  - 'Начало работы':
+    - 'Быстрый старт': 'getting-started/quick-start.md'
+    - 'Установка': 'getting-started/installation.md'
+    - 'Конфигурация': 'getting-started/configuration.md'
+  - 'Руководства':
+    - 'Интеграция с n8n': 'guides/n8n-integration.md'
+    - 'VPN настройка': 'guides/vpn-setup.md'
+    - 'Docker развертывание': 'guides/docker-deployment.md'
+    - 'Устранение неполадок': 'guides/troubleshooting.md'
+  - 'API':
+    - 'Обзор API': 'api/overview.md'
+    - 'Endpoints': 'api/endpoints.md'
+    - 'Модели данных': 'api/models.md'
+    - 'Примеры': 'api/examples.md'
+  - 'Архитектура':
+    - 'Обзор системы': 'architecture/overview.md'
+    - 'Агенты': 'architecture/agents.md'
+    - 'Персоналии': 'architecture/personalities.md'
+  - 'Разработка':
+    - 'Вклад в проект': 'development/contributing.md'
+    - 'Создание агентов': 'development/creating-agents.md'
+    - 'Тестирование': 'development/testing.md'
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/miniduck-beep/ai-agent-farm
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/ai-farm
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/ai_agent_farm
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
+
+copyright: Copyright &copy; 2024 AI Agent Farm Team

@@ -157,16 +157,31 @@ async def get_research_result(task_id: str):
         if task_result.ready():
             # Задача завершена
             if task_result.successful():
+                # ИСПРАВЛЕНИЕ: Правильно получаем результат
+                result = task_result.result
+                if isinstance(result, str):
+                    # Результат уже строка - используем как есть
+                    final_result = result
+                else:
+                    # Если результат не строка, преобразуем в JSON
+                    final_result = json.dumps(result, ensure_ascii=False, indent=2)
+                
                 return ResultResponse(
                     task_id=task_id,
                     status="SUCCESS",
                     progress=100,
                     message="Исследование завершено успешно!",
-                    result=task_result.get()
+                    result=final_result
                 )
             else:
                 # Произошла ошибка
-                error_info = str(task_result.info) if task_result.info else "Неизвестная ошибка"
+                error_info = "Неизвестная ошибка"
+                if hasattr(task_result, 'info') and task_result.info:
+                    if isinstance(task_result.info, dict):
+                        error_info = task_result.info.get('error', str(task_result.info))
+                    else:
+                        error_info = str(task_result.info)
+                
                 return ResultResponse(
                     task_id=task_id,
                     status="FAILURE", 

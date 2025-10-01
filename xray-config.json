@@ -1,0 +1,73 @@
+{
+    "inbounds": [
+        {
+            "port": 10808,
+            "protocol": "socks",
+            "sniffing": {
+                "enabled": true,
+                "destOverride": ["http", "tls"]
+            },
+            "settings": {
+                "auth": "noauth",
+                "udp": true
+            }
+        },
+        {
+            "port": 10809,
+            "protocol": "http",
+            "sniffing": {
+                "enabled": true,
+                "destOverride": ["http", "tls"]
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "162.159.195.40",
+                        "port": 443,
+                        "users": [
+                            {
+                                "id": "f584de15-2034-4170-a723-f48c2bae5e0f",
+                                "encryption": "none",
+                                "flow": "xtls-rprx-vision"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "tcp",
+                "security": "tls",
+                "tlsSettings": {
+                    "serverName": "speed.cloudflare.com",
+                    "fingerprint": "chrome"
+                }
+            },
+            "tag": "proxy"
+        },
+        {
+            "protocol": "freedom",
+            "tag": "direct"
+        }
+    ],
+    "routing": {
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "type": "field",
+                "outboundTag": "proxy",
+                "domain": [
+                    "googleapis.com",
+                    "generativelanguage.googleapis.com",
+                    "google.com",
+                    "gstatic.com",
+                    "serper.dev"
+                ]
+            }
+        ]
+    }
+}

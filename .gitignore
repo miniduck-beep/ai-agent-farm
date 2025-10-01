@@ -1,3 +1,8 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
 # Python
 __pycache__/
 *.py[cod]
@@ -16,7 +21,6 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -27,20 +31,35 @@ MANIFEST
 *.manifest
 *.spec
 
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
 # Virtual environments
-test_env/
-venv/
+.env
+.venv
 env/
+venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Environment variables (КРИТИЧНО!)
-.env
-.env.local
-.env.*.local
-
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -57,73 +76,25 @@ ehthumbs.db
 Thumbs.db
 
 # Docker
-docker-compose.override.yml
-.dockerignore
+*.log
+
+# Backup files
+*.backup
+*.bak
+docker-compose.yml.backup
+docker-compose.yml.no-vpn-backup
+docker-compose.yml.vpn-backup
+
+# Task info
+task_info.json
+
+# Test files
+test_*.py
 
 # Logs
 *.log
 logs/
-celery.log
-celery.pid
-
-# Redis dumps
-dump.rdb
 
 # Temporary files
 tmp/
 temp/
-*.tmp
-*.bak
-*.backup
-
-# Configuration files with secrets
-config/secrets.yml
-config/production.yml
-private_keys/
-
-# Jupyter Notebooks
-.ipynb_checkpoints
-
-# Coverage reports
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# Documentation builds (but keep our documentation.html)
-docs/_build/
-
-# API keys and sensitive data
-*.key
-*.pem
-*.crt
-secrets.json
-api_keys.txt
-
-# xray configuration (может содержать секреты)
-xray_config.json
-v2ray_config.json
-
-# Database files
-*.db
-*.sqlite3
-*.sqlite
-
-# Node modules (если потребуется в будущем)
-node_modules/
-
-# Local development files
-local_settings.py
-development_overrides.yml
