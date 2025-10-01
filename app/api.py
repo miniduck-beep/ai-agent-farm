@@ -362,3 +362,229 @@ if __name__ == "__main__":
         reload=settings.debug,
         log_level=settings.log_level.lower()
     )
+
+# ===============================
+# 🎯 SHOWCASE TEAMS API SUPPORT
+# ===============================
+
+@app.get("/showcase", 
+         response_model=Dict[str, Any],
+         tags=["🎯 Showcase Teams"],
+         summary="Получить информацию о showcase командах",
+         description="Возвращает список доступных showcase команд с их описанием и примерами использования")
+async def get_showcase_teams():
+    """
+    🎯 Информация о showcase командах агентов
+    
+    Возвращает детальную информацию о специализированных командах:
+    - SWOT-Аналитик - для анализа компаний
+    - Технический Рецензент - для анализа GitHub репозиториев  
+    - Инвестиционный Советник - для анализа акций
+    """
+    try:
+        from app.main_crew import get_showcase_crew_info
+        showcase_info = get_showcase_crew_info()
+        
+        return {
+            "status": "success",
+            "message": "Showcase teams information",
+            "showcase_teams": showcase_info,
+            "total_teams": len(showcase_info),
+            "usage_tips": {
+                "swot_analysis": "Введите название компании (например: Apple, Tesla, Microsoft)",
+                "tech_review": "Введите полную ссылку на GitHub репозиторий",
+                "investment_advisor": "Введите тикер акции (например: AAPL, TSLA, MSFT)"
+            },
+            "examples": {
+                "swot_analysis": {
+                    "topic": "Apple",
+                    "crew_type": "swot_analysis",
+                    "language": "ru",
+                    "depth": "comprehensive"
+                },
+                "tech_review": {
+                    "topic": "https://github.com/microsoft/vscode",
+                    "crew_type": "tech_review", 
+                    "language": "ru",
+                    "depth": "standard"
+                },
+                "investment_advisor": {
+                    "topic": "AAPL",
+                    "crew_type": "investment_advisor",
+                    "language": "ru", 
+                    "depth": "comprehensive"
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting showcase info: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Ошибка получения информации о showcase командах"
+        )
+
+@app.post("/research/showcase",
+          response_model=Dict[str, Any],
+          tags=["🎯 Showcase Teams"],
+          summary="Запуск showcase исследования",
+          description="Специальный endpoint для запуска showcase команд с валидацией")
+async def create_showcase_research(
+    research_data: ResearchRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    🎯 Запуск showcase исследования с enhanced валидацией
+    
+    Поддерживаемые showcase команды:
+    - swot_analysis: SWOT-анализ компаний
+    - tech_review: Техническая рецензия GitHub репозиториев
+    - investment_advisor: Инвестиционный анализ акций
+    """
+    try:
+        from app.main_crew import get_showcase_crew_info
+        showcase_crews = get_showcase_crew_info()
+        
+        # Проверяем что это showcase команда
+        if research_data.crew_type not in showcase_crews:
+            available_crews = list(showcase_crews.keys())
+            raise HTTPException(
+                status_code=400,
+                detail=f"Недопустимый тип showcase команды. Доступные: {available_crews}"
+            )
+        
+        # Специальная валидация для каждого типа команды
+        crew_info = showcase_crews[research_data.crew_type]
+        
+        if research_data.crew_type == "swot_analysis":
+            if not research_data.topic or len(research_data.topic.strip()) < 2:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Для SWOT-анализа необходимо указать название компании (минимум 2 символа)"
+                )
+        
+        elif research_data.crew_type == "tech_review":
+            topic = research_data.topic.strip()
+            if not (topic.startswith("https://github.com/") or topic.startswith("http://github.com/")):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Для технической рецензии необходимо указать корректную ссылку на GitHub репозиторий"
+                )
+        
+        elif research_data.crew_type == "investment_advisor":
+            topic = research_data.topic.strip().upper()
+            if not topic or len(topic) < 1 or len(topic) > 10:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Для инвестиционного анализа необходимо указать корректный тикер акции (1-10 символов)"
+                )
+            # Обновляем topic с uppercase
+            research_data.topic = topic
+        
+        # Запускаем задачу через стандартный механизм
+        task = research_task.delay(
+            topic=research_data.topic,
+            crew_type=research_data.crew_type,
+            language=research_data.language,
+            depth=research_data.depth
+        )
+        
+        return {
+            "task_id": task.id,
+            "status": "PENDING",
+            "message": f"Showcase исследование '{crew_info['name']}' запущено",
+            "crew_info": crew_info,
+            "topic": research_data.topic,
+            "estimated_time": crew_info["estimated_time"],
+            "use_cases": crew_info["use_cases"],
+            "created_at": datetime.utcnow().isoformat(),
+            "showcase": True
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating showcase research: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка запуска showcase исследования: {str(e)}"
+        )
+
+@app.get("/crews/enhanced",
+         response_model=Dict[str, Any], 
+         tags=["🎯 Showcase Teams"],
+         summary="Получить расширенную информацию о всех командах",
+         description="Возвращает информацию о стандартных и showcase командах")
+async def get_enhanced_crews():
+    """
+    🎯 Расширенная информация о всех доступных командах
+    
+    Включает как стандартные команды, так и showcase команды
+    с детальными описаниями и примерами использования
+    """
+    try:
+        # Стандартные команды
+        standard_crews = {
+            "general": {
+                "name": "Универсальные исследования",
+                "description": "Comprehensive исследования любых тем",
+                "estimated_time": "3-5 минут",
+                "category": "standard"
+            },
+            "business_analysis": {
+                "name": "Бизнес-аналитика", 
+                "description": "Анализ рынков и бизнес-возможностей",
+                "estimated_time": "5-8 минут",
+                "category": "standard"
+            },
+            "seo_content": {
+                "name": "SEO контент",
+                "description": "Создание SEO-оптимизированного контента", 
+                "estimated_time": "4-6 минут",
+                "category": "standard"
+            },
+            "tech_research": {
+                "name": "Техническое исследование",
+                "description": "Глубокий технический анализ",
+                "estimated_time": "6-10 минут", 
+                "category": "standard"
+            },
+            "financial_analysis": {
+                "name": "Финансовый анализ",
+                "description": "Финансовые исследования и анализ рисков",
+                "estimated_time": "5-8 минут",
+                "category": "standard"
+            }
+        }
+        
+        # Showcase команды
+        from app.main_crew import get_showcase_crew_info
+        showcase_crews = get_showcase_crew_info()
+        
+        # Добавляем категорию к showcase командам
+        for crew_key, crew_info in showcase_crews.items():
+            crew_info["category"] = "showcase"
+        
+        # Объединяем все команды
+        all_crews = {**standard_crews, **showcase_crews}
+        
+        return {
+            "status": "success",
+            "available_crews": all_crews,
+            "total_crews": len(all_crews),
+            "categories": {
+                "standard": len(standard_crews),
+                "showcase": len(showcase_crews)
+            },
+            "default": "general",
+            "recommended_for_demo": ["swot_analysis", "tech_review", "investment_advisor"],
+            "new_features": ["Enhanced validation", "Specialized agents", "Industry expertise"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting enhanced crews: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Ошибка получения информации о командах"
+        )
+
+print("✅ API расширен поддержкой showcase команд")

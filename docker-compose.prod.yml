@@ -139,3 +139,18 @@ networks:
 # 5. Configure log aggregation (ELK, Fluentd, etc.)
 # 6. Set up monitoring (Prometheus, Grafana)
 # 7. Use secrets management for API keys
+
+  # 📊 Monitoring & Logging Integration
+  logging:
+    external: true
+    
+# Настройка логирования для всех сервисов
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "5"
+    labels: "service,environment"
+
+# Применяем к существующим сервисам
+# (добавьте в каждый сервис: logging: *default-logging)

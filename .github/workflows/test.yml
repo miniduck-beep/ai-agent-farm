@@ -1,0 +1,248 @@
+name: 🧪 CI - Continuous Integration & Testing
+
+# Триггеры для запуска
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Запуск каждый день в 6:00 UTC для проверки стабильности
+    - cron: '0 6 * * *'
+
+# Переменные окружения
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # 🔍 Линтинг и качество кода
+  lint:
+    name: 🔍 Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: 🎨 Check code formatting (Black)
+        run: black --check --diff app/ tests/
+        continue-on-error: true
+      
+      - name: 🔍 Lint with flake8
+        run: |
+          flake8 app/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 app/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
+      
+      - name: 🏷️ Type checking with mypy
+        run: mypy app/ --ignore-missing-imports
+        continue-on-error: true
+
+  # 🧪 Unit тестирование
+  test-unit:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: 🧪 Run unit tests
+        run: |
+          pytest -m unit --tb=short --cov=app --cov-report=xml --cov-report=term-missing
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_TEST || 'test_key' }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY_TEST || 'test_key' }}
+      
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # 🔄 Integration тестирование
+  test-integration:
+    name: 🔄 Integration Tests
+    runs-on: ubuntu-latest
+    needs: test-unit
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: 🔄 Run integration tests
+        run: pytest -m integration --tb=short -v
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_TEST || 'test_key' }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY_TEST || 'test_key' }}
+
+  # 🎯 End-to-End тестирование
+  test-e2e:
+    name: 🎯 End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: test-integration
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐳 Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 🚀 Start services
+        run: |
+          docker compose up -d --build
+          sleep 30  # Ждем запуска всех сервисов
+      
+      - name: 🏥 Health check
+        run: |
+          curl -f http://localhost:8000/health || exit 1
+          echo "✅ API здоров"
+      
+      - name: 🐍 Setup Python for E2E tests
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Install test dependencies
+        run: |
+          pip install pytest httpx requests pytest-asyncio
+      
+      - name: 🎯 Run E2E tests
+        run: pytest -m e2e --tb=short -v
+        env:
+          API_BASE_URL: http://localhost:8000
+      
+      - name: 📋 Show logs on failure
+        if: failure()
+        run: |
+          echo "=== API Logs ==="
+          docker compose logs api
+          echo "=== Worker Logs ==="
+          docker compose logs worker
+      
+      - name: 🧹 Cleanup
+        if: always()
+        run: docker compose down -v
+
+  # 🔒 Security сканирование
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 🔒 Run safety check
+        run: |
+          pip install safety
+          safety check -r requirements.txt
+        continue-on-error: true
+      
+      - name: 🕵️ Run Bandit security linter
+        run: |
+          pip install bandit
+          bandit -r app/ -f json -o bandit-report.json
+        continue-on-error: true
+      
+      - name: 📊 Upload security results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: bandit-report.json
+
+  # ✅ Финальная проверка
+  all-tests-passed:
+    name: ✅ All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [lint, test-unit, test-integration, test-e2e, security]
+    if: always()
+    
+    steps:
+      - name: ✅ Check all jobs status
+        run: |
+          if [[ "${{ needs.lint.result }}" == "success" && 
+                "${{ needs.test-unit.result }}" == "success" && 
+                "${{ needs.test-integration.result }}" == "success" && 
+                "${{ needs.test-e2e.result }}" == "success" ]]; then
+            echo "🎉 Все тесты прошли успешно!"
+            echo "✅ Код готов к деплою"
+          else
+            echo "❌ Некоторые тесты провалились"
+            echo "🔧 Требуется исправление"
+            exit 1
+          fi
+      
+      - name: 🎊 Success notification
+        if: success()
+        run: |
+          echo "::notice title=CI Success::🎉 Все тесты прошли! Код готов к production."
+
+# Настройки для разных событий
+  # Условия успеха
+  # - Все линтеры прошли
+  # - Unit тесты прошли на Python 3.11 и 3.12  
+  # - Integration тесты с реальным Redis
+  # - E2E тесты с полным Docker setup
+  # - Security сканирование завершено

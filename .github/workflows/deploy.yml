@@ -1,0 +1,205 @@
+name: 🚀 CD - Continuous Deployment
+
+# Триггер только на создание релизов
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Возможность ручного запуска
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 🏗️ Сборка и публикация Docker образов
+  build-and-push:
+    name: 🏗️ Build & Push Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐳 Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 🔑 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+      
+      - name: 🏗️ Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # 🔍 Сканирование безопасности образа
+  security-scan:
+    name: 🔍 Security Scan Images
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    
+    steps:
+      - name: 🛡️ Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build-and-push.outputs.image-tag }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: 📊 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # 🚀 Production Deployment
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push, security-scan]
+    environment: production
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔐 Setup SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      
+      - name: 📋 Create deployment script
+        run: |
+          cat > deploy.sh << 'DEPLOY_EOF'
+          #!/bin/bash
+          set -e
+          
+          echo "🚀 Starting AI Agent Farm deployment..."
+          
+          # Переходим в директорию проекта
+          cd /opt/ai-agent-farm || { echo "❌ Project directory not found"; exit 1; }
+          
+          # Резервная копия текущей версии
+          echo "💾 Creating backup..."
+          docker compose down
+          tar -czf "backup-$(date +%Y%m%d-%H%M%S).tar.gz" . --exclude='backup-*.tar.gz' --exclude='.git'
+          
+          # Обновление кода
+          echo "📥 Pulling latest code..."
+          git fetch --all
+          git reset --hard origin/main
+          
+          # Сборка и запуск
+          echo "🏗️ Building and starting services..."
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml up --build -d
+          
+          # Проверка здоровья
+          echo "🏥 Health checking..."
+          sleep 30
+          
+          for i in {1..10}; do
+            if curl -f http://localhost:8000/health; then
+              echo "✅ Deployment successful!"
+              break
+            fi
+            echo "⏳ Waiting for API... ($i/10)"
+            sleep 10
+          done
+          
+          # Очистка старых образов
+          echo "🧹 Cleaning up old Docker images..."
+          docker system prune -f
+          
+          echo "🎉 Deployment completed successfully!"
+          DEPLOY_EOF
+          
+          chmod +x deploy.sh
+      
+      - name: 🚀 Deploy to server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          # Копируем скрипт на сервер и выполняем
+          scp -o StrictHostKeyChecking=no deploy.sh $DEPLOY_USER@$DEPLOY_HOST:/tmp/
+          ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "bash /tmp/deploy.sh"
+      
+      - name: 🏥 Post-deployment health check
+        run: |
+          sleep 60  # Даем время на полный запуск
+          curl -f http://${{ secrets.DEPLOY_HOST }}:8000/health || exit 1
+      
+      - name: 📬 Deployment notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Production deployment successful!"
+            echo "🌐 API: http://${{ secrets.DEPLOY_HOST }}:8000"
+            echo "📊 Docs: http://${{ secrets.DEPLOY_HOST }}:8000/docs"
+          else
+            echo "❌ Production deployment failed!"
+          fi
+
+  # 🧪 Staging Deployment (опционально)  
+  deploy-staging:
+    name: 🧪 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    environment: staging
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🧪 Deploy to staging
+        run: |
+          echo "🧪 Staging deployment would happen here"
+          echo "Using image: ${{ needs.build-and-push.outputs.image-tag }}"
+          # Здесь был бы аналогичный процесс для staging окружения
+
+# Секреты, которые нужно настроить в GitHub:
+# DEPLOY_SSH_KEY - SSH private key для доступа к серверу
+# DEPLOY_HOST - IP или домен продакшен сервера  
+# DEPLOY_USER - пользователь для SSH подключения
+# GOOGLE_API_KEY_TEST - тестовый Google API key
+# SERPER_API_KEY_TEST - тестовый Serper API key
