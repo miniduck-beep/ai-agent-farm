@@ -33,7 +33,7 @@
 ### Запуск полной системы
 ```bash
 # Клонируем репозиторий
-git clone https://github.com/your-username/ai-agent-farm.git
+git clone https://github.com/miniduck-beep/ai-agent-farm.git
 cd ai-agent-farm
 
 # Настраиваем переменные окружения
@@ -134,7 +134,7 @@ print(f"Исследование запущено: {task_id}")
 ## 🔗 Интеграция с n8n
 
 ### Быстрая настройка
-1. **Импорт воркфлоу:** `n8n-workflows/ai-agent-farm-complete.json`
+1. **Импорт воркфлоу:** `integrations/n8n/ai-agent-farm-workflow.json`
 2. **Настройка URL:** Укажите `http://localhost:8000` 
 3. **API ключи:** Настройте аутентификацию
 4. **Тестирование:** Запустите тестовое исследование
@@ -147,7 +147,7 @@ print(f"Исследование запущено: {task_id}")
 - ✅ Интеграция с базами данных
 - ✅ Кастомизация под ваши процессы
 
-Подробнее: [Руководство по интеграции с n8n](#-интеграция-с-n8n-1)
+Подробнее: [Руководство по интеграции с n8n](integrations/n8n/README.md)
 
 ## 🌐 Веб-интерфейс Streamlit
 
@@ -231,10 +231,11 @@ ai-agent-farm/
 │   ├── integration/           # Integration тесты
 │   ├── e2e/                   # End-to-end тесты
 │   └── conftest.py            # Настройки pytest
-├── 📁 n8n-workflows/          # n8n интеграция
+├── 📁 integrations/n8n/       # n8n интеграция
 ├── 📁 docs/                   # Документация
 ├── 📁 .github/                # GitHub workflows
 ├── docker-compose.yml         # Docker конфигурация
+├── docker-compose.prod.yml    # Production конфигурация
 ├── Makefile                   # Команды разработки
 └── requirements.txt           # Зависимости
 ```
@@ -290,8 +291,8 @@ MIT License - см. [LICENSE](LICENSE) файл
 
 ## 🆘 Поддержка
 
-- **Issues:** [GitHub Issues](https://github.com/your-username/ai-agent-farm/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/your-username/ai-agent-farm/discussions)
+- **Issues:** [GitHub Issues](https://github.com/miniduck-beep/ai-agent-farm/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/miniduck-beep/ai-agent-farm/discussions)
 - **Documentation:** [Полная документация](docs/)
 
 ---

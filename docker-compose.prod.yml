@@ -1,0 +1,141 @@
+# AI Agent Farm - Production Docker Compose Configuration
+# =====================================================
+# Optimized configuration for production deployment
+
+version: '3.8'
+
+services:
+  # 🚀 Main API Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - SERPER_API_KEY=${SERPER_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - WORKERS=4
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ai-farm-network
+    volumes:
+      - ./logs:/app/logs
+
+  # 📦 Background Task Workers
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    command: celery -A app.tasks worker --loglevel=info --concurrency=2
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - SERPER_API_KEY=${SERPER_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - ai-farm-network
+    volumes:
+      - ./logs:/app/logs
+    deploy:
+      replicas: 2
+
+  # 🌐 Web Interface (Optional)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    command: streamlit run app/web_interface.py --server.port=8501 --server.address=0.0.0.0
+    ports:
+      - "${WEB_PORT:-8501}:8501"
+    environment:
+      - API_URL=http://api:8000
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - ai-farm-network
+
+  # 🔄 Redis Cache & Message Broker
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ai-farm-network
+    volumes:
+      - redis_data:/data
+
+  # 📊 Monitoring (Optional)
+  flower:
+    image: mher/flower:0.9.7
+    command: flower --broker=redis://redis:6379/0
+    ports:
+      - "${FLOWER_PORT:-5555}:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - ai-farm-network
+
+  # 🔄 Reverse Proxy (Optional with SSL)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+    networks:
+      - ai-farm-network
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  ai-farm-network:
+    driver: bridge
+
+# Production deployment notes:
+# 1. Set environment variables in .env.prod
+# 2. Configure SSL certificates in ./ssl/
+# 3. Customize nginx.conf for your domain
+# 4. Use external managed Redis for high availability
+# 5. Configure log aggregation (ELK, Fluentd, etc.)
+# 6. Set up monitoring (Prometheus, Grafana)
+# 7. Use secrets management for API keys

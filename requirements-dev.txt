@@ -1,32 +1,47 @@
-# Include all production requirements
--r requirements.txt
+# AI Agent Farm - Development Dependencies
+# =======================================
+# Additional dependencies for development and testing
 
-# Development tools
+# 🧪 Testing Framework
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-mock>=3.12.0
+pytest-cov>=4.0.0
+httpx>=0.27.0
+requests-mock>=1.11.0
+
+# 🔍 Code Quality
 black>=23.0.0
 flake8>=6.0.0
 isort>=5.12.0
-mypy>=1.0.0
+mypy>=1.5.0
+pre-commit>=3.4.0
 
-# Testing
-pytest>=7.0.0
-pytest-cov>=4.0.0
-pytest-asyncio>=0.21.0
-httpx>=0.25.0  # For async client tests
-pytest-mock>=3.10.0
-
-# Pre-commit hooks
-pre-commit>=3.0.0
-
-# Documentation
+# 📊 Documentation
 mkdocs>=1.5.0
-mkdocs-material>=9.0.0
-mkdocs-mermaid2-plugin>=1.0.0
+mkdocs-material>=9.2.0
+mkdocs-mermaid2-plugin>=0.6.0
 
-# API testing
-httpie>=3.2.0
+# 🛠️ Development Tools
+ipython>=8.15.0
+jupyter>=1.0.0
+rich>=13.5.0
+typer>=0.9.0
 
-# Docker development
-docker-compose>=2.0.0
+# 🐛 Debugging
+pdb++>=0.10.3
+icecream>=2.1.3
 
-# Environment management  
-python-dotenv>=1.0.0
+# 📈 Performance Profiling
+py-spy>=0.3.14
+memory-profiler>=0.61.0
+
+# 🔧 Build Tools
+build>=0.10.0
+twine>=4.0.0
+setuptools>=68.0.0
+wheel>=0.41.0
+
+# 📦 Docker Development
+docker>=6.1.0
+docker-compose>=1.29.0
