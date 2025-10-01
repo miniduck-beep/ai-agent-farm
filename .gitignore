@@ -1,9 +1,17 @@
-# Environment variables
+# =====================================
+# AI Agent Farm - Production .gitignore
+# =====================================
+
+# 🔒 КРИТИЧНО: Переменные окружения и секреты
 .env
 .env.local
 .env.production
+.env.development
+*.key
+*.pem
+config/secrets/
 
-# Python
+# 🐍 Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -21,52 +29,61 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
+# 🧪 Testing и coverage
+.coverage
+.pytest_cache/
 .tox/
 .nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
-.pytest_cache/
-cover/
+htmlcov/
 
-# Virtual environments
-.env
-.venv
+# 💻 IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 📦 Virtual environments
+.env/
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# 🐳 Docker
+.dockerignore
 
-# OS
+# 📊 Logs и временные файлы
+*.log
+logs/
+*.tmp
+*.temp
+celerybeat-schedule
+celerybeat.pid
+
+# 🗄️ Databases
+*.db
+*.sqlite3
+*.sqlite
+redis-data/
+postgres-data/
+
+# 🔧 System files
 .DS_Store
 .DS_Store?
 ._*
@@ -75,26 +92,18 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Docker
-*.log
+# 📱 Node.js (если будет frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Backup files
+# 🎯 Project specific
+results/
+reports/
+research_outputs/
+backup/
 *.backup
-*.bak
-docker-compose.yml.backup
-docker-compose.yml.no-vpn-backup
-docker-compose.yml.vpn-backup
 
-# Task info
-task_info.json
-
-# Test files
-test_*.py
-
-# Logs
-*.log
-logs/
-
-# Temporary files
-tmp/
-temp/
+# 🔄 CI/CD
+.github/workflows/secrets.yml

@@ -1,32 +1,75 @@
-services:
-  # Redis - брокер сообщений для Celery
-  redis:
-    image: "redis:alpine"
-    ports:
-      - "6379:6379"
+# ===========================================
+# AI Agent Farm - Production Docker Compose
+# ===========================================
 
-  # FastAPI для автоматизации через n8n  
+version: '3.8'
+
+services:
+  # 🚀 FastAPI API Server
   api:
     build: .
-    command: sh -c "pip install -r requirements.txt && uvicorn app.api:app --host 0.0.0.0 --port 8000 --reload"
     ports:
       - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     env_file:
       - .env
     depends_on:
       - redis
-    volumes:
-      - .:/app
-    working_dir: /app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Celery Worker для CrewAI задач
+  # ⚙️ Celery Worker для тяжелых задач
   worker:
     build: .
-    command: sh -c "pip install -r requirements.txt && celery -A app.tasks:celery_app worker --loglevel=info"
+    command: celery -A app.tasks worker --loglevel=info --concurrency=2
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     env_file:
       - .env
     depends_on:
       - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.tasks", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 🗄️ Redis для очередей и кеширования с персистентностью
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
     volumes:
-      - .:/app
-    working_dir: /app
+      # 🔒 КРИТИЧНО: Персистентность данных на диске хост-машины
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# 📂 Именованные volumes для персистентности данных
+volumes:
+  redis_data:
+    driver: local
+
+# 🌐 Сеть для изоляции сервисов
+networks:
+  default:
+    name: ai-agent-farm-network
