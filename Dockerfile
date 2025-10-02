@@ -1,42 +1,34 @@
-# ===========================================
-# AI Agent Farm - Production-Ready Dockerfile
-# ===========================================
+FROM python:3.11-slim-bookworm
 
-FROM python:3.11-slim
+LABEL maintainer="AI Agent Farm"
+LABEL description="AI Agent Farm - Debian 12 Bookworm based container"
 
-# Обновляем систему и устанавливаем необходимые пакеты
+WORKDIR /app
+
+# Установка системных зависимостей для Debian 12 Bookworm
 RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Устанавливаем рабочую директорию
-WORKDIR /code
-
-# 🔒 БЕЗОПАСНОСТЬ: Создаем непривилегированного пользователя
-RUN groupadd -r appgroup && useradd -r -g appgroup -d /code -s /bin/bash appuser
-
-# Копируем и устанавливаем зависимости (делаем это до USER для кеширования слоев)
+# Копируем файлы зависимостей
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip==24.0 && \
+
+# Устанавливаем Python зависимости
+RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Копируем исходный код приложения
-COPY ./app ./app
+# Копируем код приложения
+COPY . .
 
-# 🔒 БЕЗОПАСНОСТЬ: Меняем владельца всех файлов на appuser
-RUN chown -R appuser:appgroup /code
+# Создаем пользователя для безопасности
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
 
-# 🔒 БЕЗОПАСНОСТЬ: Переключаемся на непривилегированного пользователя
-USER appuser
-
-# Устанавливаем переменные окружения
-ENV PYTHONPATH="/code"
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Указываем порт для FastAPI
+# Порт по умолчанию
 EXPOSE 8000
 
-# 🚀 Команда запуска с оптимизациями для production
-CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Команда по умолчанию
+CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
